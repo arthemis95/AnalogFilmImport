@@ -10,6 +10,11 @@ import numpy as np
 #----------------------------------------------------------------------------------------------------------------
 # Sometimes, with B/W images 16Bit TIFs mess up the jpg convert
 # Enforcing 8Bit TIFs for JPG conversion
+# Args:
+#    image (PIL.Image): The input image to be processed.
+# Returns
+#    image (PIL.Image): The processed image
+#
 def tiff_force_8bit(image):
     if image.format == 'TIFF' and image.mode == 'I;16':
         array = np.array(image)
@@ -27,23 +32,24 @@ def tiff_force_8bit(image):
 #    int: Quality setting (hopefully) achieving desired size
 #
 def deduce_optimal_quality(image, max_size_bytes):
-
+	
     max_quality = 100  # Maximum quality setting (0-100)
-    min_quality = 1  # Minimum quality setting (0-100)
+    min_quality = 10  # Minimum quality setting (0-100)
     mid_quality = None
     max_iter = 15
-    
-    # Create an in-memory file-like object
-    buffer = io.BytesIO()
+    prev_quality = 0
     
     # Perform binary search to find the optimal quality
-    while min_quality <= max_quality and max_iter:
-        
-        # Ensuring buffer is empty
-        buffer.flush()
+    while max_iter:
+ 
+        # Create an in-memory file-like object
+        buffer = io.BytesIO()
 
         # Determining next quality setting
         mid_quality = (min_quality + max_quality) // 2
+        if mid_quality == prev_quality:
+            return mid_quality
+
         max_iter -= 1
 
         # Save the image with the current quality setting to the in-memory buffer
@@ -51,7 +57,7 @@ def deduce_optimal_quality(image, max_size_bytes):
 
         # Get the size of the in-memory buffer
         buffer_size = buffer.getbuffer().nbytes
-        
+
         # Checking for acceptable quality
         if buffer_size >= max_size_bytes * 0.95 and buffer_size <=  max_size_bytes:
             return mid_quality
@@ -61,7 +67,7 @@ def deduce_optimal_quality(image, max_size_bytes):
             min_quality = mid_quality + 1
         else:
             max_quality = mid_quality - 1
-		
+        prev_quality = mid_quality
     # Return the min quality if no optimal quality is found
     return min_quality
 
@@ -91,7 +97,7 @@ def process_image(argument):
 
     # Determine the optimal JPEG quality setting based on the maximum allowed file size
     if quality is None:
-        quality = deduce_optimal_quality(im, max_size * 1024 * 1024)
+        quality = deduce_optimal_quality(im, max_size * 1000 * 1000)
 
     # Save the image as a JPEG file with the determined quality setting
     im.save(newpath, 'jpeg', quality=quality)
