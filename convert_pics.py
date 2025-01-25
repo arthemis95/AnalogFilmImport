@@ -81,16 +81,14 @@ def process_image(argument):
 
     # Unpacking args
     file, quality, max_size = argument
+    print(file)
     print('Processing {}'.format(os.path.basename(file)))
 
     # Open the image using PIL, doing this before 16-bit conversion, to avoid downconverting again
     im = Image.open(file)
 
-    # Convert the image to 16-bit depth and compress it using ZIP compression
-    subprocess.run(['convert', file, '-depth', '16', '-compress', 'ZIP', file])
-
     # Generate the output JPEG file path
-    newpath = file.split('.')[0] + '.jpg'
+    newpath = file.rstrip('.tif') + '.jpg'
     
 	#Enforcing 8 bit image, required by jpg
     im = tiff_force_8bit(im)
@@ -101,6 +99,9 @@ def process_image(argument):
 
     # Save the image as a JPEG file with the determined quality setting
     im.save(newpath, 'jpeg', quality=quality)
+	
+	# Convert the image to 16-bit depth and compress it using ZIP compression
+    subprocess.run(['magick convert', file, '-depth', '16', '-compress', 'ZIP', file])
 
 
 if __name__ == '__main__':
