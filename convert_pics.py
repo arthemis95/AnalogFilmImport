@@ -81,7 +81,6 @@ def process_image(argument):
 
     # Unpacking args
     file, quality, max_size = argument
-    print(file)
     print('Processing {}'.format(os.path.basename(file)))
 
     # Open the image using PIL, doing this before 16-bit conversion, to avoid downconverting again
@@ -101,7 +100,16 @@ def process_image(argument):
     im.save(newpath, 'jpeg', quality=quality)
 	
 	# Convert the image to 16-bit depth and compress it using ZIP compression
-    subprocess.run(['magick convert', file, '-depth', '16', '-compress', 'ZIP', file])
+    executable = ""
+    if os.path.exists("/usr/bin/magick"):
+        executable = "magick convert"
+    elif os.path.exists("/usr/bin/convert"):
+        executable = "convert"
+    else:
+        print("Magick needs to be installed for TIF conversion")
+        raise Exception
+
+    subprocess.run([executable, file, '-depth', '16', '-compress', 'ZIP', file])
 
 
 if __name__ == '__main__':
@@ -114,7 +122,11 @@ if __name__ == '__main__':
     
     
     # Find all TIFF files in the specified project folder
-    files = glob.glob(os.path.join(os.path.join(args.path, '*'), '*.tif'))
+    files = []
+    for root, _, files_ in os.walk(args.path):
+            for file in files_:
+                if file.endswith(".tif"):
+                    files.append(os.path.join(root,file))
 
     arguments = []
     for file in files:
