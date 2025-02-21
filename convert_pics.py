@@ -1,10 +1,17 @@
+__jpgxl_supported__ = False
 import os
 import glob
 import subprocess
 import argparse
 import io
 from multiprocessing import Pool
+try:
+    import pillow_jxl
+    __jpgxl_supported__ = True
+except ImportError:
+    pass
 from PIL import Image
+from PIL import TiffImagePlugin
 import numpy as np
 
 #----------------------------------------------------------------------------------------------------------------
@@ -31,14 +38,15 @@ def tiff_force_8bit(image):
 # Returns:
 #    int: Quality setting (hopefully) achieving desired size
 #
-def deduce_optimal_quality(image, max_size_bytes):
+def deduce_optimal_quality(image, max_size_bytes, fileEnding):
 	
     max_quality = 100  # Maximum quality setting (0-100)
     min_quality = 10  # Minimum quality setting (0-100)
     mid_quality = None
     max_iter = 15
     prev_quality = 0
-    
+    fileEnding_ = fileEnding
+
     # Perform binary search to find the optimal quality
     while max_iter:
  
@@ -53,7 +61,7 @@ def deduce_optimal_quality(image, max_size_bytes):
         max_iter -= 1
 
         # Save the image with the current quality setting to the in-memory buffer
-        image.save(buffer, format='JPEG', quality=mid_quality, optimize=True)
+        image.save(buffer, format=fileEnding_, quality=mid_quality, optimize=True)
 
         # Get the size of the in-memory buffer
         buffer_size = buffer.getbuffer().nbytes
@@ -80,24 +88,33 @@ def deduce_optimal_quality(image, max_size_bytes):
 def process_image(argument):
 
     # Unpacking args
-    file, quality, max_size = argument
+    file, quality, max_size, jpgxl = argument
+    fileEnding = 'jxl' if jpgxl else 'jpg'
     print('Processing {}'.format(os.path.basename(file)))
 
     # Open the image using PIL, doing this before 16-bit conversion, to avoid downconverting again
     im = Image.open(file)
 
+    # Remove the STRIPOFFSETS tag from the EXIF data to avoid issues with JPEG/JPGXL compression
+    exif = im.getexif()
+    del exif[TiffImagePlugin.STRIPOFFSETS]
+
     # Generate the output JPEG file path
-    newpath = file.rstrip('.tif') + '.jpg'
+    newpath = file.rstrip('.tif') + '.' + fileEnding
     
+    if not jpgxl:
+        # updating the fileEnding for JPEG
+        fileEnding = 'JPEG'
+
 	#Enforcing 8 bit image, required by jpg
     im = tiff_force_8bit(im)
 
     # Determine the optimal JPEG quality setting based on the maximum allowed file size
     if quality is None:
-        quality = deduce_optimal_quality(im, max_size * 1000 * 1000)
+        quality = deduce_optimal_quality(im, max_size * 1000 * 1000, fileEnding)
 
     # Save the image as a JPEG file with the determined quality setting
-    im.save(newpath, 'jpeg', quality=quality)
+    im.save(newpath, fileEnding, quality=quality)
 	
 	# Convert the image to 16-bit depth and compress it using ZIP compression
     executable = ""
@@ -118,8 +135,12 @@ if __name__ == '__main__':
     parser.add_argument('path', help='Path to the project folder')
     parser.add_argument('--quality', help='Quality setting for jpeg compression, if none is provided, it will be deduced automatically.', default=None, required=False, type=int)
     parser.add_argument('--max_size', help='Maximum allowed size for .jpg files, in megabytes', default=10, required=False, type=int)
+    parser.add_argument('--jpgxl', help='Use JPEG-XL instead of JPEG for compression', default=False, required=False, action='store_true')
     args = parser.parse_args() 
     
+    if args.jpgxl and not __jpgxl_supported__:
+        print("JPEG-XL is not supported, falling back to JPEG")
+        args.jpgxl = False
     
     # Find all TIFF files in the specified project folder
     files = []
@@ -130,7 +151,7 @@ if __name__ == '__main__':
 
     arguments = []
     for file in files:
-        arguments.append((file, args.quality, args.max_size))
+        arguments.append((file, args.quality, args.max_size, args.jpgxl))
 	
     # Create a multiprocessing Pool to process images in parallel
     with Pool(os.cpu_count()) as p:
