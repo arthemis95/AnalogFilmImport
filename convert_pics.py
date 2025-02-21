@@ -102,7 +102,7 @@ def process_image(argument):
 	# Convert the image to 16-bit depth and compress it using ZIP compression
     executable = ""
     if os.path.exists("/usr/bin/magick"):
-        executable = "magick convert"
+        executable = "magick"
     elif os.path.exists("/usr/bin/convert"):
         executable = "convert"
     else:
