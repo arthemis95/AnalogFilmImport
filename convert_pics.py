@@ -116,7 +116,7 @@ def process_image(argument):
     # Save the image as a JPEG file with the determined quality setting
     im.save(newpath, fileEnding, quality=quality)
 	
-	# Convert the image to 16-bit depth and compress it using ZIP compression
+	# Convert the image to 32-bit float and compress it using ZIP compression
     executable = ""
     if os.path.exists("/usr/bin/magick"):
         executable = "magick"
@@ -126,7 +126,7 @@ def process_image(argument):
         print("Magick needs to be installed for TIF conversion")
         raise Exception
 
-    subprocess.run([executable, file, '-depth', '16', '-compress', 'ZIP', file])
+    subprocess.run([executable, file, '-depth', '32', '-define', 'quantum:format=floating-point', '-compress', 'ZIP', file])
 
 
 if __name__ == '__main__':
