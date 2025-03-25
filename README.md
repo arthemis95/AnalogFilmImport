@@ -1,7 +1,7 @@
 # AnalogFilmImport
 Small project to help me preprocess my film pictures once I get the scans from the lab.
 
-It iterates over all subfolders in a specified directory, searches for .tif files, ensures they have a 16Bit Colour depth, if not, upconverts them. Then generates .jpg previews.
+It iterates over all subfolders in a specified directory, searches for .tif files, ensures they have a 32Bit float Colour depth, as this is the native format for Gimp . Then generates .jpg previews.
 
 ## Arguments
   - path : Relative or absolute path to the Folder containing your images. Required, first argument. 
