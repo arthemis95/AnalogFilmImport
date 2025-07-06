@@ -102,7 +102,7 @@ def process_image(argument):
     # PIL can't deal with floating point tifs yet...
     except Image.UnidentifiedImageError:
         created_tmp = True
-        subprocess.run([executable, file, '-depth', '8', '-define', 'quantum:format=integer', '-compress', 'ZIP', file.replace('.tif', '_tmp.tif')])
+        subprocess.run([executable, file, '-depth', '8', '-define', 'quantum:format=integer', file.replace('.tif', '_tmp.tif')])
         im = Image.open(file.replace('.tif', '_tmp.tif'))
 
     # Remove the STRIPOFFSETS tag from the EXIF data to avoid issues with JPEG/JPGXL compression
