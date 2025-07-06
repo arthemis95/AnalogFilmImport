@@ -87,13 +87,22 @@ def deduce_optimal_quality(image, max_size_bytes, fileEnding):
 #
 def process_image(argument):
 
+    global executable
+
     # Unpacking args
     file, quality, max_size, jpgxl = argument
     fileEnding = 'jxl' if jpgxl else 'jpg'
     print('Processing {}'.format(os.path.basename(file)))
 
     # Open the image using PIL, doing this before 16-bit conversion, to avoid downconverting again
-    im = Image.open(file)
+    im = None
+    try:
+        im = Image.open(file)
+    # PIL can't deal with floating point tifs yet...
+    except Image.UnidentifiedImageError:
+        subprocess.run([executable, file, '-depth', '8', '-define', 'quantum:format=integer', '-compress', 'ZIP', file.replace('.tif', '_tmp.tif')])
+
+        
 
     # Remove the STRIPOFFSETS tag from the EXIF data to avoid issues with JPEG/JPGXL compression
     exif = im.getexif()
@@ -116,15 +125,6 @@ def process_image(argument):
     # Save the image as a JPEG file with the determined quality setting
     im.save(newpath, fileEnding, quality=quality)
 	
-	# Convert the image to 32-bit float and compress it using ZIP compression
-    executable = ""
-    if os.path.exists("/usr/bin/magick"):
-        executable = "magick"
-    elif os.path.exists("/usr/bin/convert"):
-        executable = "convert"
-    else:
-        print("Magick needs to be installed for TIF conversion")
-        raise Exception
 
     subprocess.run([executable, file, '-depth', '32', '-define', 'quantum:format=floating-point', '-compress', 'ZIP', file])
 
@@ -141,6 +141,16 @@ if __name__ == '__main__':
     if args.jpgxl and not __jpgxl_supported__:
         print("JPEG-XL is not supported, falling back to JPEG")
         args.jpgxl = False
+
+    # check for Magick support
+    global executable
+    if os.path.exists("/usr/bin/magick"):
+        executable = "magick"
+    elif os.path.exists("/usr/bin/convert"):
+        executable = "convert"
+    else:
+        print("Magick needs to be installed for TIF conversion")
+        raise Exception
     
     # Find all TIFF files in the specified project folder
     files = []
