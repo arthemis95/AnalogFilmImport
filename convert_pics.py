@@ -88,7 +88,7 @@ def deduce_optimal_quality(image, max_size_bytes, fileEnding):
 def process_image(argument):
 
     global executable
-
+    created_tmp = False
     # Unpacking args
     file, quality, max_size, jpgxl = argument
     fileEnding = 'jxl' if jpgxl else 'jpg'
@@ -98,11 +98,12 @@ def process_image(argument):
     im = None
     try:
         im = Image.open(file)
+        im = tiff_force_8bit(im)
     # PIL can't deal with floating point tifs yet...
     except Image.UnidentifiedImageError:
+        created_tmp = True
         subprocess.run([executable, file, '-depth', '8', '-define', 'quantum:format=integer', '-compress', 'ZIP', file.replace('.tif', '_tmp.tif')])
-
-        
+        im = Image.open(file.replace('.tif', '_tmp.tif'))
 
     # Remove the STRIPOFFSETS tag from the EXIF data to avoid issues with JPEG/JPGXL compression
     exif = im.getexif()
@@ -115,8 +116,6 @@ def process_image(argument):
         # updating the fileEnding for JPEG
         fileEnding = 'JPEG'
 
-	#Enforcing 8 bit image, required by jpg
-    im = tiff_force_8bit(im)
 
     # Determine the optimal JPEG quality setting based on the maximum allowed file size
     if quality is None:
@@ -127,6 +126,8 @@ def process_image(argument):
 	
 
     subprocess.run([executable, file, '-depth', '32', '-define', 'quantum:format=floating-point', '-compress', 'ZIP', file])
+    if created_tmp:
+        os.remove(file.replace('.tif', '_tmp.tif'))
 
 
 if __name__ == '__main__':
