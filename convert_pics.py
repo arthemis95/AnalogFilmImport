@@ -106,8 +106,11 @@ def process_image(argument):
         im = Image.open(file.replace('.tif', '_tmp.tif'))
 
     # Remove the STRIPOFFSETS tag from the EXIF data to avoid issues with JPEG/JPGXL compression
-    exif = im.getexif()
-    del exif[TiffImagePlugin.STRIPOFFSETS]
+    try:
+        exif = im.getexif()
+        del exif[TiffImagePlugin.STRIPOFFSETS]
+    except KeyError:
+        pass
 
     # Generate the output JPEG file path
     newpath = file.rstrip('.tif') + '.' + fileEnding
