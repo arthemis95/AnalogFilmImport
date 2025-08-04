@@ -90,7 +90,7 @@ def process_image(argument):
     global executable
     created_tmp = False
     # Unpacking args
-    file, quality, max_size, jpgxl = argument
+    file, quality, max_size, jpgxl, preview = argument
     fileEnding = 'jxl' if jpgxl else 'jpg'
     print('Processing {}'.format(os.path.basename(file)))
 
@@ -127,8 +127,8 @@ def process_image(argument):
     # Save the image as a JPEG file with the determined quality setting
     im.save(newpath, fileEnding, quality=quality)
 	
-
-    subprocess.run([executable, file, '-depth', '32', '-define', 'quantum:format=floating-point', '-compress', 'ZIP', file])
+    if not preview:
+        subprocess.run([executable, file, '-depth', '32', '-define', 'quantum:format=floating-point', '-compress', 'ZIP', file])
     if created_tmp:
         os.remove(file.replace('.tif', '_tmp.tif'))
 
@@ -140,6 +140,7 @@ if __name__ == '__main__':
     parser.add_argument('--quality', help='Quality setting for jpeg compression, if none is provided, it will be deduced automatically.', default=None, required=False, type=int)
     parser.add_argument('--max_size', help='Maximum allowed size for .jpg files, in megabytes', default=10, required=False, type=int)
     parser.add_argument('--jpgxl', help='Use JPEG-XL instead of JPEG for compression', default=False, required=False, action='store_true')
+    parser.add_argument('--preview_only', help='Only generates the preview, leaves the .tif untouched', default=False, required=False, action='store_true')
     args = parser.parse_args() 
     
     if args.jpgxl and not __jpgxl_supported__:
@@ -165,7 +166,7 @@ if __name__ == '__main__':
 
     arguments = []
     for file in files:
-        arguments.append((file, args.quality, args.max_size, args.jpgxl))
+        arguments.append((file, args.quality, args.max_size, args.jpgxl, args.preview_only))
 	
     # Create a multiprocessing Pool to process images in parallel
     with Pool(os.cpu_count()) as p:
