@@ -87,10 +87,9 @@ def deduce_optimal_quality(image, max_size_bytes, fileEnding):
 #
 def process_image(argument):
 
-    global executable
     created_tmp = False
     # Unpacking args
-    file, quality, max_size, jpgxl, preview = argument
+    file, quality, max_size, jpgxl, preview, executable = argument
     fileEnding = 'jxl' if jpgxl else 'jpg'
     print('Processing {}'.format(os.path.basename(file)))
 
@@ -148,11 +147,10 @@ if __name__ == '__main__':
         args.jpgxl = False
 
     # check for Magick support
-    global executable
     if os.path.exists("/usr/bin/magick"):
-        executable = "magick"
+        executable = "/usr/bin/magick"
     elif os.path.exists("/usr/bin/convert"):
-        executable = "convert"
+        executable = "/usr/bin/convert"
     else:
         print("Magick needs to be installed for TIF conversion")
         raise Exception
@@ -166,7 +164,7 @@ if __name__ == '__main__':
 
     arguments = []
     for file in files:
-        arguments.append((file, args.quality, args.max_size, args.jpgxl, args.preview_only))
+        arguments.append((file, args.quality, args.max_size, args.jpgxl, args.preview_only, executable))
 	
     # Create a multiprocessing Pool to process images in parallel
     with Pool(os.cpu_count()) as p:
