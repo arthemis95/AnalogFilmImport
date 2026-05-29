@@ -147,10 +147,12 @@ if __name__ == '__main__':
         args.jpgxl = False
 
     # check for Magick support
-    if os.path.exists("/usr/bin/magick"):
-        executable = "/usr/bin/magick"
-    elif os.path.exists("/usr/bin/convert"):
-        executable = "/usr/bin/convert"
+    magickPath = subprocess.run(["which", "magick"], capture_output=True)
+    convertPath = subprocess.run(["which", "convert"], capture_output=True)
+    if magickPath.returncode == 0:
+        executable = magickPath.stdout.decode().rstrip('\n')
+    elif convertPath.returncode == 0:
+        executable = convertPath.stdout.decode().rstrip('\n')
     else:
         print("Magick needs to be installed for TIF conversion")
         raise Exception
